@@ -13,9 +13,13 @@ uint16_t Crc16_Update(uint16_t crc, uint8_t byte)
     return crc;
 }
 
-uint32_t Crc32_Compute(const uint8_t *data, uint32_t len)
+uint32_t Crc32_Init(void)
 {
-    uint32_t crc = 0xFFFFFFFFUL;
+    return 0xFFFFFFFFUL;
+}
+
+uint32_t Crc32_Update(uint32_t crc, const uint8_t *data, uint32_t len)
+{
     uint32_t i;
     uint8_t  j;
 
@@ -27,5 +31,18 @@ uint32_t Crc32_Compute(const uint8_t *data, uint32_t len)
             crc = (crc & 1u) ? ((crc >> 1) ^ 0xEDB88320UL) : (crc >> 1);
         }
     }
+    return crc;
+}
+
+uint32_t Crc32_Final(uint32_t crc)
+{
     return crc ^ 0xFFFFFFFFUL;
 }
+
+uint32_t Crc32_Compute(const uint8_t *data, uint32_t len)
+{
+    return Crc32_Final(Crc32_Update(Crc32_Init(), data, len));
+}
+
+
+

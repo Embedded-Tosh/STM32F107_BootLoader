@@ -19,11 +19,12 @@ uint8_t Header_IsValid_ForCheck(const uint8_t *h)
 static uint8_t Find_And_ValidateHeader(void)
 {
     const FwMetadata_t *md = (const FwMetadata_t *)FW_METADATA_ADDRESS;
+    const uint32_t footer_off = FW_METADATA_ADDRESS - APP_ADDRESS;   /* bytes before the footer */
     uint32_t crc;
 
     if (md->password != FW_PASSWORD)
     {
-        DEBUG_HEX("validate: bad Password", md->password);
+        DEBUG_HEX("validate: bad password", md->password);
         return 0;
     }
     if (md->machine_id != MACHINE_ID)
@@ -31,21 +32,24 @@ static uint8_t Find_And_ValidateHeader(void)
         DEBUG_HEX("validate: machine_id mismatch", md->machine_id);
         return 0;
     }
-		
-		if(IsDebuggerAttached())
-		{
-			DEBUG_MSG("Debug Active Skip CRC");
-			return 1;
-		}
-    /* image_size must be non-zero and must not reach into the metadata region
-     * itself (the footer's own crc32 field isn't part of what it describes). */
-    if (md->image_size == 0 || md->image_size > (APP_MAX_SIZE - FW_METADATA_REGION_SIZE))
+
+    /* image_size = total bytes written to flash from APP_ADDRESS. It must
+     * at least reach the end of the footer, and fit in the application area.
+     * (The linker may store the initial values of initialised variables
+     * AFTER the footer, so the footer is not necessarily the last thing.) */
+    if (md->image_size < (footer_off + FW_HEADER_SIZE) || md->image_size > APP_MAX_SIZE)
     {
         DEBUG_HEX("validate: bad image_size", md->image_size);
         return 0;
     }
 
-    crc = Crc32_Compute((const uint8_t *)APP_ADDRESS, md->image_size);
+    /* CRC over the whole image EXCEPT the 20 footer bytes (the footer holds
+     * the CRC itself): the part before it, then the part after it. */
+    crc = Crc32_Init();
+    crc = Crc32_Update(crc, (const uint8_t *)APP_ADDRESS, footer_off);
+    crc = Crc32_Update(crc, (const uint8_t *)(FW_METADATA_ADDRESS + FW_HEADER_SIZE),
+                       md->image_size - footer_off - FW_HEADER_SIZE);
+    crc = Crc32_Final(crc);
     if (crc != md->crc32)
     {
         DEBUG_HEX("validate: crc32 computed", crc);
@@ -67,3 +71,5 @@ uint8_t App_IsValid(void)
         reset >= (APP_ADDRESS + APP_MAX_SIZE))                   return 0;
     return Find_And_ValidateHeader();
 }
+
+

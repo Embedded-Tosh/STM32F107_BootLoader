@@ -13,7 +13,7 @@
 static uint8_t  s_check_ok = 0;   /* CMD_CHECK passed in this session */
 static uint8_t  s_erased   = 0;   /* app region erased and ready for writes */
 #if DEBUG_BUILD
-static uint32_t s_total_size = 0; /* declared image size + footer, from CMD_CHECK - progress display only */
+static uint32_t s_total_size = 0; /* declared image size (total bytes), from CMD_CHECK - progress display only */
 #endif
 
 void BootloaderCommandLoop(void)
@@ -57,7 +57,7 @@ void BootloaderCommandLoop(void)
                     {
                         uint32_t declared_image_size;
                         memcpy(&declared_image_size, payload + 12, 4); /* FwMetadata_t.image_size */
-                        s_total_size = declared_image_size + FW_HEADER_SIZE;
+                        s_total_size = declared_image_size;   /* image_size = total bytes to be written */
                     }
 #endif
                     UART_SendByte(ACK_BYTE);
@@ -136,3 +136,7 @@ void BootloaderCommandLoop(void)
         }
     }
 }
+
+
+
+
