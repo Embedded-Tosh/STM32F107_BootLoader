@@ -41,3 +41,6 @@
  * Author: Aashutosh
  * Linkedin: aashutosh-535016185 
  ******************************************************************************/
+
+python test29.py COM9 proj.bin
+ 
